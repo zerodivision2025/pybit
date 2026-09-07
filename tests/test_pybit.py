@@ -759,3 +759,34 @@ def test_upload_chat_file_sends_multipart_request(monkeypatch):
     )
     assert b'name="upload_file"; filename="proof.png"' in request.body
     assert b"abc" in request.body
+
+
+@pytest.mark.parametrize("name,method,path,query", [
+    ("get_coin_withdrawal", "GET", "/v5/account/withdrawal", {"coinName": "USDT"}),
+    ("no_convert_repay", "POST", "/v5/account/no-convert-repay", {"coin": "USDT", "amount": "10"}),
+])
+def test_custom_account_compatibility(http, name, method, path, query):
+    http._submit_request = Mock(return_value={"retCode": 0})
+    assert getattr(http, name)(**query) == {"retCode": 0}
+    http._submit_request.assert_called_once_with(
+        method=method, path=http.endpoint + path, query=query, auth=True
+    )
+
+
+@pytest.mark.parametrize("snake_case", [False, True])
+def test_default_network_retry_and_response_compatibility(snake_case):
+    manager = _V5HTTPManager(retry_delay=0)
+    payload = {"ret_code": 0, "ret_msg": "OK"} if snake_case else {"retCode": 0, "retMsg": "OK"}
+    response = Mock(status_code=200)
+    response.json.return_value = payload
+    manager.client.send = Mock(side_effect=[requests.exceptions.ConnectionError("temporary"), response])
+    assert manager._submit_request(method="GET", path=manager.endpoint + "/test") == payload
+    assert manager.client.send.call_count == 2
+
+
+def test_network_retry_can_be_disabled():
+    manager = _V5HTTPManager(force_retry=False, retry_delay=0)
+    manager.client.send = Mock(side_effect=requests.exceptions.ConnectionError("temporary"))
+    with pytest.raises(requests.exceptions.ConnectionError):
+        manager._submit_request(method="GET", path=manager.endpoint + "/test")
+    assert manager.client.send.call_count == 1

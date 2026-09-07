@@ -25,6 +25,10 @@ class AccountHTTP(_V5HTTPManager):
             auth=True,
         )
 
+    def get_coin_withdrawal(self, **kwargs):
+        """Compatibility alias for get_transferable_amount."""
+        return self.get_transferable_amount(**kwargs)
+
     def get_transferable_amount(self, **kwargs):
         """Query the available amount to transfer of a specific coin in the Unified wallet.
 
@@ -314,6 +318,10 @@ class AccountHTTP(_V5HTTPManager):
             query=kwargs,
             auth=True,
         )
+
+    def no_convert_repay(self, **kwargs):
+        """Compatibility alias for manual_no_convert_repay."""
+        return self.manual_no_convert_repay(**kwargs)
 
     def manual_no_convert_repay(self, **kwargs):
         """Manual Repay Without Asset Conversion
